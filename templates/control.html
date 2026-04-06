@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>대기번호 관리</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      background: #e8e8ed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 상단 내비게이션 바 ── */
+    .nav-bar {
+      background: #f2f2f7;
+      border-bottom: 1px solid #c6c6c8;
+      padding: 14px 20px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1c1c1e;
+      flex: 1;
+      text-align: center;
+    }
+
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1c1c1e;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #34c759;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── 배지 ── */
+    .badge-row {
+      padding: 12px 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .badge {
+      background: #34c759;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 8px 24px;
+      border-radius: 20px;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── 숫자 입력 박스 4칸 ── */
+    .digit-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 20px;
+    }
+
+    .digit-box {
+      width: 64px;
+      height: 72px;
+      background: #fff;
+      border: 2px solid #d1d1d6;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      font-weight: 900;
+      color: #1c1c1e;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .digit-box.active {
+      border-color: #007aff;
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.2);
+    }
+
+    .digit-box.empty { color: #c6c6c8; }
+
+    /* ── 액션 버튼 ── */
+    .action-row {
+      display: flex;
+      gap: 12px;
+      padding: 0 20px 16px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 16px 0;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .btn:active { opacity: 0.75; transform: scale(0.97); }
+
+    .btn-add {
+      background: #f4b400;
+      color: #fff;
+    }
+
+    .btn-clear {
+      background: #34c759;
+      color: #fff;
+    }
+
+    /* ── 숫자 목록 테이블 ── */
+    .list-section {
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      flex: 1;
+      overflow-y: auto;
+      margin: 0 0;
+    }
+
+    .list-header {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 600;
+      color: #3a3a3c;
+      padding: 14px 0 12px;
+      border-bottom: 1px solid #e5e5ea;
+      background: #f9f9fb;
+      border-radius: 16px 16px 0 0;
+      position: sticky;
+      top: 0;
+    }
+
+    .list-body { padding-bottom: 80px; }
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #e5e5ea;
+      padding: 4px 16px 4px 8px;
+    }
+
+    .list-row:last-child { border-bottom: none; }
+
+    .row-numbers {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    .row-num {
+      text-align: center;
+      font-size: 19px;
+      font-weight: 700;
+      color: #1c1c1e;
+      padding: 12px 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-delete-row {
+      width: 32px;
+      height: 32px;
+      background: #ff3b30;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-left: 8px;
+      transition: opacity 0.15s;
+    }
+
+    .btn-delete-row:active { opacity: 0.7; transform: scale(0.93); }
+
+    /* ── 하단 키패드 ── */
+    .keypad-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #d1d1d6;
+      border-top: 1px solid #c6c6c8;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      z-index: 200;
+    }
+
+    .key {
+      background: #f2f2f7;
+      border: none;
+      padding: 16px 0;
+      font-size: 22px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #1c1c1e;
+      cursor: pointer;
+      transition: background 0.1s;
+      text-align: center;
+    }
+
+    .key:active { background: #c7c7cc; }
+
+    .key.del {
+      background: #e5e5ea;
+      color: #ff3b30;
+      font-size: 18px;
+    }
+
+    .key.confirm {
+      background: #34c759;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .key.zero { grid-column: span 2; }
+
+    /* 빈 상태 */
+    .empty-list {
+      text-align: center;
+      color: #aeaeb2;
+      padding: 40px;
+      font-size: 15px;
+    }
+
+    /* 토스트 */
+    .toast {
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(44,44,46,0.92);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 999;
+    }
+
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 내비 -->
+  <div class="nav-bar">
+    <div style="width:80px"></div>
+    <div class="nav-title">대기번호 관리</div>
+    <div class="nav-status">
+      <div class="status-dot"></div>
+      <span id="status-text">ONLINE (Apple TV)</span>
+    </div>
+  </div>
+
+  <!-- 배지 -->
+  <div class="badge-row">
+    <div class="badge" id="badge">준비완료 0 / 30</div>
+  </div>
+
+  <!-- 입력 박스 4칸 -->
+  <div class="digit-row">
+    <div class="digit-box empty" id="d0">_</div>
+    <div class="digit-box empty" id="d1">_</div>
+    <div class="digit-box empty" id="d2">_</div>
+    <div class="digit-box empty" id="d3">_</div>
+  </div>
+
+  <!-- 액션 버튼 -->
+  <div class="action-row">
+    <button class="btn btn-add" onclick="addNumber()">준비완료에 추가</button>
+    <button class="btn btn-clear" onclick="clearAll()">전체 삭제</button>
+  </div>
+
+  <!-- 번호 목록 -->
+  <div class="list-section">
+    <div class="list-header">준비완료</div>
+    <div class="list-body" id="list-body">
+      <div class="empty-list">등록된 번호가 없습니다</div>
+    </div>
+  </div>
+
+  <!-- 하단 키패드 -->
+  <div class="keypad-bar">
+    <button class="key" onclick="pressKey('1')">1</button>
+    <button class="key" onclick="pressKey('2')">2</button>
+    <button class="key" onclick="pressKey('3')">3</button>
+    <button class="key del" onclick="pressDelete()">⌫</button>
+    <button class="key" onclick="pressKey('4')">4</button>
+    <button class="key" onclick="pressKey('5')">5</button>
+    <button class="key" onclick="pressKey('6')">6</button>
+    <button class="key confirm" onclick="addNumber()">추가</button>
+    <button class="key" onclick="pressKey('7')">7</button>
+    <button class="key" onclick="pressKey('8')">8</button>
+    <button class="key" onclick="pressKey('9')">9</button>
+    <button class="key" onclick="pressKey('0')">0</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const socket = io();
+    let input = '';
+    let currentQueue = [];
+
+    socket.on('connect', () => {});
+    socket.on('queue_update', ({ queue }) => {
+      currentQueue = queue;
+      renderList(queue);
+      updateBadge(queue.length);
+      updateDigitDisplay();
+    });
+
+    /* 키패드 */
+    function pressKey(k) {
+      if (input.length >= 4) return;
+      input += k;
+      updateDigitDisplay();
+    }
+
+    function pressDelete() {
+      input = input.slice(0, -1);
+      updateDigitDisplay();
+    }
+
+    function updateDigitDisplay() {
+      for (let i = 0; i < 4; i++) {
+        const box = document.getElementById(`d${i}`);
+        if (i < input.length) {
+          box.textContent = input[i];
+          box.className = 'digit-box' + (i === input.length - 1 ? ' active' : '');
+        } else {
+          box.textContent = '_';
+          box.className = 'digit-box empty';
+        }
+      }
+    }
+
+    function addNumber() {
+      if (input.length !== 4) {
+        showToast('4자리 번호를 입력하세요');
+        return;
+      }
+      if (currentQueue.length >= 30) {
+        showToast('최대 30개까지 등록 가능합니다');
+        return;
+      }
+      if (currentQueue.includes(input)) {
+        showToast('이미 등록된 번호입니다');
+        return;
+      }
+      socket.emit('add_number', { number: input });
+      showToast(`${input} 등록 완료!`);
+      input = '';
+      updateDigitDisplay();
+    }
+
+    function removeNumber(num) {
+      socket.emit('remove_number', { number: num });
+    }
+
+    function clearAll() {
+      if (currentQueue.length === 0) { showToast('삭제할 번호가 없습니다'); return; }
+      if (confirm('모든 번호를 삭제할까요?')) {
+        socket.emit('clear_all');
+        showToast('전체 삭제 완료');
+      }
+    }
+
+    /* 목록 렌더링: 5개씩 행으로 묶음 */
+    function renderList(queue) {
+      const body = document.getElementById('list-body');
+      if (queue.length === 0) {
+        body.innerHTML = '<div class="empty-list">등록된 번호가 없습니다</div>';
+        return;
+      }
+
+      // 5개씩 행으로 분리
+      const rows = [];
+      for (let i = 0; i < queue.length; i += 5) {
+        rows.push(queue.slice(i, i + 5));
+      }
+
+      body.innerHTML = rows.map((row, rowIdx) => {
+        const nums = row.map(n =>
+          `<div class="row-num" onclick="removeNumber('${n}')">${n}</div>`
+        ).join('');
+        // 행의 마지막 번호 하나 삭제 (X 버튼은 행 전체 삭제 대신 행 마지막 항목 삭제)
+        const lastNum = row[row.length - 1];
+        return `
+          <div class="list-row">
+            <div class="row-numbers">${nums}</div>
+            <button class="btn-delete-row" onclick="removeNumber('${lastNum}')">✕</button>
+          </div>`;
+      }).join('');
+    }
+
+    function updateBadge(count) {
+      document.getElementById('badge').textContent = `준비완료 ${count} / 30`;
+    }
+
+    /* 토스트 */
+    let toastTimer;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast show';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.className = 'toast', 2000);
+    }
+  </script>
+</body>
+</html>

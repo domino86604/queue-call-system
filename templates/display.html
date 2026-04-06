@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domino's - 준비완료</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Oswald:wght@700;900&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --red: #E31837;
+      --blue: #006491;
+      --dark: #00243F;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--dark);
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 헤더 ── */
+    header {
+      background: var(--red);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 48px;
+      height: 115px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 35%;
+      background: var(--blue);
+      clip-path: polygon(12% 0, 100% 0, 100% 100%, 0% 100%);
+    }
+
+    .header-right {
+      z-index: 2;
+      text-align: center;
+      color: #fff;
+    }
+
+    .ready-label {
+      font-family: 'Oswald', sans-serif;
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+
+    .ready-sub {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 4px;
+    }
+
+    /* ── 메인 ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 40px 16px;
+      gap: 14px;
+      overflow: hidden;
+    }
+
+    .info-banner {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      text-align: center;
+      padding: 10px;
+      font-size: clamp(14px, 1.6vw, 22px);
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+    }
+
+    .grid-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .number-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px 18px;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .number-cell {
+      background: #fff;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(26px, 3.8vw, 62px);
+      font-weight: 700;
+      color: var(--dark);
+      letter-spacing: 0.06em;
+      padding: 18px 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .number-cell::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: var(--red);
+    }
+
+    .number-cell.latest {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 24px rgba(227, 24, 55, 0.5);
+      animation: popIn 0.35s ease-out, glow 2s ease-in-out infinite;
+    }
+
+    .number-cell.latest::before {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.75) translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes glow {
+
+      0%,
+      100% {
+        box-shadow: 0 4px 24px rgba(227, 24, 55, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 4px 40px rgba(227, 24, 55, 0.8);
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.25);
+      grid-column: span 5;
+      padding: 60px 0;
+    }
+
+    .empty-state .icon {
+      font-size: 80px;
+      display: block;
+      margin-bottom: 20px;
+    }
+
+    .empty-state p {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    /* ── 푸터 ── */
+    footer {
+      background: var(--blue);
+      flex-shrink: 0;
+      padding: 10px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .footer-right {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 13px;
+    }
+
+    .count-badge {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 14px;
+      color: #fff;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="header-right">
+      <div class="ready-label">🍕 준비완료</div>
+      <div class="ready-sub">주문하신 피자가 준비되었습니다</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="info-banner">
+      📢 &nbsp; 아래 화면에 번호가 표시되면 카운터에서 수령해 주세요
+    </div>
+    <div class="grid-wrap">
+      <div class="number-grid" id="number-grid">
+        <div class="empty-state" style="grid-column:span 5">
+          <span class="icon">🍕</span>
+          <p>현재 준비된 주문이 없습니다</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-left">
+      <div class="live-dot"></div>
+      <span>실시간 연결 중</span>
+    </div>
+    <div class="count-badge" id="count-badge">대기 0건</div>
+    <div class="footer-right">Domino's Pizza Order Display System</div>
+  </footer>
+
+  <script>
+    const socket = io();
+    socket.on('queue_update', ({ queue }) => render(queue));
+
+    function render(queue) {
+      const grid = document.getElementById('number-grid');
+      document.getElementById('count-badge').textContent = `대기 ${queue.length}건`;
+
+      if (queue.length === 0) {
+        grid.style.gridTemplateColumns = '1fr';
+        grid.innerHTML = `
+          <div class="empty-state">
+            <span class="icon">🍕</span>
+            <p>현재 준비된 주문이 없습니다</p>
+          </div>`;
+        return;
+      }
+
+      const cols = queue.length <= 4 ? queue.length : 5;
+      grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      grid.innerHTML = queue.map((num, idx) => {
+        const latest = idx === queue.length - 1;
+        return `<div class="number-cell${latest ? ' latest' : ''}">${num}</div>`;
+      }).join('');
+    }
+  </script>
+</body>
+
+</html>
