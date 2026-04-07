@@ -281,9 +281,40 @@
     <div class="footer-right">Domino's Pizza Order Display System</div>
   </footer>
 
+  <audio id="dingdongSound" src="/static/dingdong.wav" preload="auto"></audio>
+  <div id="soundOverlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#fff; cursor:pointer;" onclick="initSound()">
+    <div style="font-size:80px; margin-bottom:20px;">🔊</div>
+    <h2 style="font-size:36px; margin-bottom:12px; font-family:'Noto Sans KR', sans-serif;">화면을 한 번 터치해주세요</h2>
+    <p style="font-size:20px; color:rgba(255,255,255,0.7); font-family:'Noto Sans KR', sans-serif;">(딩동 알림음 재생을 위해 필요합니다)</p>
+  </div>
+
   <script>
     const socket = io();
-    socket.on('queue_update', ({ queue }) => render(queue));
+    let prevQueueLength = 0;
+    let soundEnabled = false;
+
+    function initSound() {
+      const audio = document.getElementById('dingdongSound');
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        soundEnabled = true;
+        document.getElementById('soundOverlay').style.display = 'none';
+      }).catch(err => {
+        console.error("Audio init error:", err);
+      });
+    }
+
+    socket.on('queue_update', ({ queue }) => {
+      // 새로운 번호가 추가되었을 때 소리 재생
+      if (soundEnabled && queue.length > prevQueueLength) {
+        const audio = document.getElementById('dingdongSound');
+        audio.currentTime = 0;
+        audio.play().catch(e => console.error("Play error:", e));
+      }
+      prevQueueLength = queue.length;
+      render(queue);
+    });
 
     function render(queue) {
       const grid = document.getElementById('number-grid');
