@@ -319,7 +319,9 @@
         
         // 차임벨 종료 후 TTS 음성 출력
         audio.onended = () => {
-          const text = `${newNumber}번 고객님, 주문하신 피자 나왔습니다.`;
+          // TTS가 "이천 이백"이 아닌 "이 이 이 이"로 하나씩 읽도록 숫자 사이에 공백 추가
+          const spacedNumber = newNumber.split('').join(' ');
+          const text = `${spacedNumber}번 고객님, 주문하신 피자 나왔습니다.`;
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = 'ko-KR'; // 한국어
           utterance.rate = 0.95; // 살짝 여유있는 톤
