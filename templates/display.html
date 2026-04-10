@@ -281,11 +281,11 @@
     <div class="footer-right">Domino's Pizza Order Display System</div>
   </footer>
 
-  <audio id="dingdongSound" src="/static/dingdong.wav" preload="auto"></audio>
+  <audio id="chimeSound" src="/static/domisoledo.wav" preload="auto"></audio>
   <div id="soundOverlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#fff; cursor:pointer;" onclick="initSound()">
     <div style="font-size:80px; margin-bottom:20px;">🔊</div>
     <h2 style="font-size:36px; margin-bottom:12px; font-family:'Noto Sans KR', sans-serif;">화면을 한 번 터치해주세요</h2>
-    <p style="font-size:20px; color:rgba(255,255,255,0.7); font-family:'Noto Sans KR', sans-serif;">(딩동 알림음 재생을 위해 필요합니다)</p>
+    <p style="font-size:20px; color:rgba(255,255,255,0.7); font-family:'Noto Sans KR', sans-serif;">(알림음과 음성안내 재생을 위해 필요합니다)</p>
   </div>
 
   <script>
@@ -294,7 +294,12 @@
     let soundEnabled = false;
 
     function initSound() {
-      const audio = document.getElementById('dingdongSound');
+      const audio = document.getElementById('chimeSound');
+      
+      // 모바일 기기 정책 우회를 위해 음성 합성 엔진 초기화
+      const initUtterance = new SpeechSynthesisUtterance('');
+      speechSynthesis.speak(initUtterance);
+
       audio.play().then(() => {
         audio.pause();
         audio.currentTime = 0;
@@ -306,11 +311,26 @@
     }
 
     socket.on('queue_update', ({ queue }) => {
-      // 새로운 번호가 추가되었을 때 소리 재생
+      // 새로운 번호가 추가되었을 때 소리 및 음성 재생
       if (soundEnabled && queue.length > prevQueueLength) {
-        const audio = document.getElementById('dingdongSound');
+        const newNumber = queue[queue.length - 1];
+        const audio = document.getElementById('chimeSound');
         audio.currentTime = 0;
-        audio.play().catch(e => console.error("Play error:", e));
+        
+        // 차임벨 종료 후 TTS 음성 출력
+        audio.onended = () => {
+          const text = `${newNumber}번 고객님, 주문하신 피자 나왔습니다.`;
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'ko-KR'; // 한국어
+          utterance.rate = 0.95; // 살짝 여유있는 톤
+          speechSynthesis.speak(utterance);
+          audio.onended = null;
+        };
+
+        audio.play().catch(e => {
+          console.error("Play error:", e);
+          audio.onended = null;
+        });
       }
       prevQueueLength = queue.length;
       render(queue);
