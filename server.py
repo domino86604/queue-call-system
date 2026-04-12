@@ -45,6 +45,10 @@ def on_clear_all():
     queue.clear()
     socketio.emit('queue_update', {'queue': queue})
 
+@socketio.on('test_sound')
+def on_test_sound(data):
+    socketio.emit('play_test_sound', data)
+
 if __name__ == '__main__':
     import socket
     try:
