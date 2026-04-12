@@ -320,12 +320,13 @@
         // 차임벨 종료 후 TTS 음성 출력
         audio.onended = () => {
           // PC TTS 엔진이 '6번'을 '여섯번' 등 고유어로 읽는 현상 방지 (숫자를 명시적 한글 발음으로 변환)
+          // 쉼표(,)를 추가하여 "1111" 처럼 같은 숫자가 반복될 때 너무 빠르게 뭉개져서 읽히는 현상 방지
           const numMap = {'0':'영', '1':'일', '2':'이', '3':'삼', '4':'사', '5':'오', '6':'육', '7':'칠', '8':'팔', '9':'구'};
-          const hangulNumber = newNumber.split('').map(n => numMap[n] || n).join(' ');
+          const hangulNumber = newNumber.split('').map(n => numMap[n] || n).join(', ');
           const text = `${hangulNumber}번 고객님, 주문하신 피자 나왔습니다.`;
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = 'ko-KR'; // 한국어
-          utterance.rate = 0.95; // 살짝 여유있는 톤
+          utterance.rate = 0.9; // 또박또박 일정한 속도유지를 위해 살짝 늦춤
           speechSynthesis.speak(utterance);
           audio.onended = null;
         };
