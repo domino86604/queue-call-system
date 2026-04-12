@@ -313,12 +313,6 @@
     <button class="btn btn-clear" onclick="clearAll()">전체 삭제</button>
   </div>
 
-  <div style="padding: 0 20px 16px; display:flex; gap:8px;">
-    <button class="btn" onclick="testSound(1)" style="flex:1; background:#006491; color:white; font-size:14px; padding:12px 0;">🎵 1번음<br><small>(백화점/공항)</small></button>
-    <button class="btn" onclick="testSound(2)" style="flex:1; background:#006491; color:white; font-size:14px; padding:12px 0;">🎵 2번음<br><small>(단정/깔끔)</small></button>
-    <button class="btn" onclick="testSound(3)" style="flex:1; background:#006491; color:white; font-size:14px; padding:12px 0;">🎵 3번음<br><small>(미니멀/팝)</small></button>
-  </div>
-
   <!-- 번호 목록 -->
   <div class="list-section">
     <div class="list-header">준비완료</div>
@@ -349,11 +343,6 @@
     const socket = io();
     let input = '';
     let currentQueue = [];
-
-    function testSound(type) {
-      socket.emit('test_sound', {type: type});
-      showToast(`TV에서 ${type}번 알림음 테스트 재생중...`);
-    }
 
     socket.on('connect', () => {});
     socket.on('queue_update', ({ queue }) => {

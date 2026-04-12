@@ -281,10 +281,7 @@
     <div class="footer-right">Domino's Pizza Order Display System</div>
   </footer>
 
-  <audio id="chimeSound" src="/static/chime1.wav" preload="auto"></audio>
-  <audio id="sound1" src="/static/chime1.wav" preload="auto"></audio>
-  <audio id="sound2" src="/static/chime2.wav" preload="auto"></audio>
-  <audio id="sound3" src="/static/chime3.wav" preload="auto"></audio>
+  <audio id="chimeSound" src="/static/chime2.wav" preload="auto"></audio>
   <div id="soundOverlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#fff; cursor:pointer;" onclick="initSound()">
     <div style="font-size:80px; margin-bottom:20px;">🔊</div>
     <h2 style="font-size:36px; margin-bottom:12px; font-family:'Noto Sans KR', sans-serif;">화면을 한 번 터치해주세요</h2>
@@ -340,28 +337,6 @@
       }
       prevQueueLength = queue.length;
       render(queue);
-    });
-
-    socket.on('play_test_sound', (data) => {
-      if (!soundEnabled) return;
-      const audio = document.getElementById(`sound${data.type}`);
-      if (!audio) return;
-      
-      audio.currentTime = 0;
-      audio.onended = () => {
-        const numMap = {'1':'일', '2':'이', '3':'삼'};
-        const text = `${numMap[data.type]}번 알림음 테스트입니다.`;
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ko-KR'; 
-        utterance.rate = 0.95;
-        speechSynthesis.speak(utterance);
-        audio.onended = null;
-      };
-
-      audio.play().catch(e => {
-        console.error("Test Play error:", e);
-        audio.onended = null;
-      });
     });
 
     function render(queue) {
