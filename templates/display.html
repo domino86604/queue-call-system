@@ -293,10 +293,21 @@
     let prevQueueLength = 0;
     let soundEnabled = false;
 
+    // 밝고 생동감 있는 한국어 음성 선택
+    // 우선순위: 여성 음성(Yuna/female) → 첫 번째 한국어 음성 → null(시스템 기본값)
+    function getPreferredVoice() {
+      const voices = speechSynthesis.getVoices();
+      return voices.find(v => v.lang.startsWith('ko') && /yuna|female|여성/i.test(v.name))
+          || voices.find(v => v.lang.startsWith('ko'))
+          || null;
+    }
+
     function initSound() {
       const audio = document.getElementById('chimeSound');
-      
+
       // 모바일 기기 정책 우회를 위해 음성 합성 엔진 초기화
+      // getVoices()는 비동기로 로드되므로 onvoiceschanged 이후에 사용 가능
+      speechSynthesis.onvoiceschanged = () => { speechSynthesis.onvoiceschanged = null; };
       const initUtterance = new SpeechSynthesisUtterance('');
       speechSynthesis.speak(initUtterance);
 
@@ -323,18 +334,56 @@
           // 쉼표(,)를 추가하여 "1111" 처럼 같은 숫자가 반복될 때 너무 빠르게 뭉개져서 읽히는 현상 방지
           const numMap = {'0':'영', '1':'일', '2':'이', '3':'삼', '4':'사', '5':'오', '6':'육', '7':'칠', '8':'팔', '9':'구'};
           const hangulNumber = newNumber.split('').map(n => numMap[n] || n).join(', ');
-          const text = `${hangulNumber}번 고객님, 주문하신 피자 나왔습니다.`;
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'ko-KR'; // 한국어
-          utterance.rate = 0.9; // 또박또박 일정한 속도유지를 위해 살짝 늦춤
-          speechSynthesis.speak(utterance);
+
+          const voice = getPreferredVoice();
+
+          // 숫자 부분 utterance: 기존 속도(0.9)에서 20% 빠르게 (0.9 × 1.2 = 1.08)
+          const numUtterance = new SpeechSynthesisUtterance(hangulNumber);
+          numUtterance.lang = 'ko-KR';
+          numUtterance.rate = 1.08;
+          numUtterance.pitch = 1.2; // 밝고 생동감 있는 톤 (기본값 1.0, 범위 0~2)
+          if (voice) numUtterance.voice = voice;
+
+          // 나머지 안내 문구 utterance: 기존 속도 유지
+          const msgUtterance = new SpeechSynthesisUtterance('번 고객님, 주문하신 피자 나왔습니다.');
+          msgUtterance.lang = 'ko-KR';
+          msgUtterance.rate = 0.9;
+          msgUtterance.pitch = 1.2; // 동일하게 밝은 톤 유지
+          if (voice) msgUtterance.voice = voice;
+
+          speechSynthesis.speak(numUtterance);
+          speechSynthesis.speak(msgUtterance);
           audio.onended = null;
         };
 
-        audio.play().catch(e => {
-          console.error("Play error:", e);
-          audio.onended = null;
-        });
+        // ── 블루투스 스피커 강제 wake-up ──
+        // 방식: Web Audio API로 무음 버퍼를 먼저 재생 → 블루투스가 깨어남 → 1200ms 후 실제 차임벨 재생
+        // (단순 setTimeout만으로는 스피커 wake-up 타이밍을 보장할 수 없어 여전히 앞부분이 잘릴 수 있음)
+        try {
+          const wakeCtx = new (window.AudioContext || window.webkitAudioContext)();
+          // 0.3초짜리 완전 무음 버퍼 생성 및 재생
+          const silentBuf = wakeCtx.createBuffer(1, wakeCtx.sampleRate * 0.3, wakeCtx.sampleRate);
+          const silentSrc = wakeCtx.createBufferSource();
+          silentSrc.buffer = silentBuf;
+          silentSrc.connect(wakeCtx.destination);
+          silentSrc.start();
+          // 무음(0.3s) + 여유(0.9s) = 총 1200ms 후 차임벨 재생
+          setTimeout(() => {
+            audio.play().catch(e => {
+              console.error("Play error:", e);
+              audio.onended = null;
+            });
+          }, 1200);
+        } catch (wakeErr) {
+          // Web Audio API를 쓸 수 없는 환경은 딜레이만 더 크게 줘서 폴백
+          console.warn("Web Audio wake-up 실패, 딜레이 폴백 사용:", wakeErr);
+          setTimeout(() => {
+            audio.play().catch(e => {
+              console.error("Play error:", e);
+              audio.onended = null;
+            });
+          }, 1500);
+        }
       }
       prevQueueLength = queue.length;
       render(queue);
