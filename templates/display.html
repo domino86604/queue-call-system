@@ -326,10 +326,15 @@
       if (soundEnabled && queue.length > prevQueueLength) {
         const newNumber = queue[queue.length - 1];
         const audio = document.getElementById('chimeSound');
+
+        // 기존 핸들러 완전 제거 후 currentTime 리셋
+        // (onended가 남아있는 상태에서 currentTime=0 설정 시 Windows에서 ended 이벤트 중복 발화 가능)
+        audio.onended = null;
         audio.currentTime = 0;
-        
+
         // 차임벨 종료 후 TTS 음성 출력
-        audio.onended = () => {
+        // { once: true } → 이벤트를 정확히 한 번만 수신 후 자동 제거 (중복 재생 원천 차단)
+        const ttsHandler = () => {
           // PC TTS 엔진이 '6번'을 '여섯번' 등 고유어로 읽는 현상 방지 (숫자를 명시적 한글 발음으로 변환)
           // 쉼표(,)를 추가하여 "1111" 처럼 같은 숫자가 반복될 때 너무 빠르게 뭉개져서 읽히는 현상 방지
           const numMap = {'0':'영', '1':'일', '2':'이', '3':'삼', '4':'사', '5':'오', '6':'육', '7':'칠', '8':'팔', '9':'구'};
@@ -353,12 +358,11 @@
 
           speechSynthesis.speak(numUtterance);
           speechSynthesis.speak(msgUtterance);
-          audio.onended = null;
         };
+        audio.addEventListener('ended', ttsHandler, { once: true });
 
         // ── 블루투스 스피커 강제 wake-up ──
-        // 방식: Web Audio API로 무음 버퍼를 먼저 재생 → 블루투스가 깨어남 → 1200ms 후 실제 차임벨 재생
-        // (단순 setTimeout만으로는 스피커 wake-up 타이밍을 보장할 수 없어 여전히 앞부분이 잘릴 수 있음)
+        // 방식: Web Audio API로 무음 버퍼를 먼저 재생 → 블루투스가 깨어남 → 700ms 후 실제 차임벨 재생
         try {
           const wakeCtx = new (window.AudioContext || window.webkitAudioContext)();
           // 0.3초짜리 완전 무음 버퍼 생성 및 재생
@@ -371,7 +375,7 @@
           setTimeout(() => {
             audio.play().catch(e => {
               console.error("Play error:", e);
-              audio.onended = null;
+              audio.removeEventListener('ended', ttsHandler); // 재생 실패 시 리스너 제거
             });
           }, 700);
         } catch (wakeErr) {
@@ -380,7 +384,7 @@
           setTimeout(() => {
             audio.play().catch(e => {
               console.error("Play error:", e);
-              audio.onended = null;
+              audio.removeEventListener('ended', ttsHandler); // 재생 실패 시 리스너 제거
             });
           }, 900);
         }
