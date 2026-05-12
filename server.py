@@ -21,6 +21,10 @@ def index():
 def display():
     return render_template('display.html')
 
+@app.route('/health')
+def health():
+    return 'ok', 200
+
 @socketio.on('connect')
 def on_connect():
     emit('queue_update', {'queue': queue})
