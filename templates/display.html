@@ -342,22 +342,21 @@
 
           const voice = getPreferredVoice();
 
-          // 숫자 부분 utterance: 기존 속도(0.9)에서 20% 빠르게 (0.9 × 1.2 = 1.08)
-          const numUtterance = new SpeechSynthesisUtterance(hangulNumber);
-          numUtterance.lang = 'ko-KR';
-          numUtterance.rate = 1.08;
-          numUtterance.pitch = 1.2; // 밝고 생동감 있는 톤 (기본값 1.0, 범위 0~2)
-          if (voice) numUtterance.voice = voice;
+          // 공통 utterance 설정 헬퍼
+          const makeUtterance = (text, rate) => {
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ko-KR';
+            u.rate = rate;
+            u.pitch = 1.2;
+            if (voice) u.voice = voice;
+            return u;
+          };
 
-          // 나머지 안내 문구 utterance: 기존 속도 유지
-          const msgUtterance = new SpeechSynthesisUtterance('번 고객님, 주문하신 피자 나왔습니다.');
-          msgUtterance.lang = 'ko-KR';
-          msgUtterance.rate = 0.9;
-          msgUtterance.pitch = 1.2; // 동일하게 밝은 톤 유지
-          if (voice) msgUtterance.voice = voice;
-
-          speechSynthesis.speak(numUtterance);
-          speechSynthesis.speak(msgUtterance);
+          // "1234번 고객님  1234번 고객님  주문하신 피자 나왔습니다." 형태로 두 번 반복
+          speechSynthesis.speak(makeUtterance(hangulNumber,      1.08)); // 숫자 (1번째)
+          speechSynthesis.speak(makeUtterance('번 고객님',         0.9));  // 안내 (1번째)
+          speechSynthesis.speak(makeUtterance(hangulNumber,      1.08)); // 숫자 (2번째)
+          speechSynthesis.speak(makeUtterance('번 고객님, 주문하신 피자 나왔습니다.', 0.9)); // 안내 (2번째)
         };
         audio.addEventListener('ended', ttsHandler, { once: true });
 
