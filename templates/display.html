@@ -367,13 +367,13 @@
           silentSrc.buffer = silentBuf;
           silentSrc.connect(wakeCtx.destination);
           silentSrc.start();
-          // 무음(0.3s) + 여유(0.9s) = 총 1200ms 후 차임벨 재생
+          // 무음(0.3s) + 여유(0.4s) = 총 700ms 후 차임벨 재생
           setTimeout(() => {
             audio.play().catch(e => {
               console.error("Play error:", e);
               audio.onended = null;
             });
-          }, 1200);
+          }, 700);
         } catch (wakeErr) {
           // Web Audio API를 쓸 수 없는 환경은 딜레이만 더 크게 줘서 폴백
           console.warn("Web Audio wake-up 실패, 딜레이 폴백 사용:", wakeErr);
@@ -382,7 +382,7 @@
               console.error("Play error:", e);
               audio.onended = null;
             });
-          }, 1500);
+          }, 900);
         }
       }
       prevQueueLength = queue.length;
