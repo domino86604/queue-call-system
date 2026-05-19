@@ -352,11 +352,10 @@
             return u;
           };
 
-          // "1234번 고객님  1234번 고객님  주문하신 피자 나왔습니다." 형태로 두 번 반복
-          speechSynthesis.speak(makeUtterance(hangulNumber,      1.08)); // 숫자 (1번째)
-          speechSynthesis.speak(makeUtterance('번 고객님',         0.9));  // 안내 (1번째)
-          speechSynthesis.speak(makeUtterance(hangulNumber,      1.08)); // 숫자 (2번째)
-          speechSynthesis.speak(makeUtterance('번 고객님, 주문하신 피자 나왔습니다.', 0.9)); // 안내 (2번째)
+          // 숫자와 "번 고객님"을 하나의 utterance로 합쳐 발화 간 자동 pause 제거
+          // (utterance를 분리하면 브라우저가 사이에 gap을 자동 삽입)
+          speechSynthesis.speak(makeUtterance(hangulNumber + ' 번 고객님', 1.0));           // 1번째
+          speechSynthesis.speak(makeUtterance(hangulNumber + ' 번 고객님, 주문하신 피자 나왔습니다.', 1.0)); // 2번째
         };
         audio.addEventListener('ended', ttsHandler, { once: true });
 
@@ -370,13 +369,13 @@
           silentSrc.buffer = silentBuf;
           silentSrc.connect(wakeCtx.destination);
           silentSrc.start();
-          // 무음(0.3s) + 여유(0.4s) = 총 700ms 후 차임벨 재생
+          // 무음(0.3s) + 여유(0.6s) = 총 900ms 후 차임벨 재생
           setTimeout(() => {
             audio.play().catch(e => {
               console.error("Play error:", e);
               audio.removeEventListener('ended', ttsHandler); // 재생 실패 시 리스너 제거
             });
-          }, 700);
+          }, 900);
         } catch (wakeErr) {
           // Web Audio API를 쓸 수 없는 환경은 딜레이만 더 크게 줘서 폴백
           console.warn("Web Audio wake-up 실패, 딜레이 폴백 사용:", wakeErr);
@@ -385,7 +384,7 @@
               console.error("Play error:", e);
               audio.removeEventListener('ended', ttsHandler); // 재생 실패 시 리스너 제거
             });
-          }, 900);
+          }, 1100);
         }
       }
       prevQueueLength = queue.length;
