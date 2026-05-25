@@ -323,6 +323,7 @@
     const socket = io();
     let input = '';
     let currentQueue = [];
+    let wakeSent = false;
 
     socket.on('connect', () => {});
     socket.on('queue_update', ({ queue }) => {
@@ -337,10 +338,18 @@
       if (input.length >= 4) return;
       input += k;
       updateDigitDisplay();
+
+      if (input.length === 4 && !wakeSent) {
+        socket.emit('wake_speaker');
+        wakeSent = true;
+      }
     }
 
     function pressDelete() {
       input = input.slice(0, -1);
+      if (input.length < 4) {
+        wakeSent = false;
+      }
       updateDigitDisplay();
     }
 
@@ -373,6 +382,7 @@
       socket.emit('add_number', { number: input });
       showToast(`${input} 등록 완료!`);
       input = '';
+      wakeSent = false;
       updateDigitDisplay();
     }
 

@@ -302,6 +302,20 @@
           || null;
     }
 
+    // 블루투스 스피커 깨우기 함수 (무음 버퍼 재생)
+    function playSilentBuffer() {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) throw new Error("Web Audio API not supported");
+      
+      const wakeCtx = new AudioCtx();
+      const silentBuf = wakeCtx.createBuffer(1, wakeCtx.sampleRate * 0.3, wakeCtx.sampleRate);
+      const silentSrc = wakeCtx.createBufferSource();
+      silentSrc.buffer = silentBuf;
+      silentSrc.connect(wakeCtx.destination);
+      silentSrc.start();
+      console.log("Silent buffer played to wake speaker.");
+    }
+
     function initSound() {
       const audio = document.getElementById('chimeSound');
 
@@ -320,6 +334,17 @@
         console.error("Audio init error:", err);
       });
     }
+
+    // 4자리 숫자가 완성되었을 때 선제적으로 스피커 깨우기
+    socket.on('wake_speaker', () => {
+      if (soundEnabled) {
+        try {
+          playSilentBuffer();
+        } catch (e) {
+          console.warn("wake_speaker 중 스피커 깨우기 실패:", e);
+        }
+      }
+    });
 
     socket.on('queue_update', ({ queue }) => {
       // 새로운 번호가 추가되었을 때 소리 및 음성 재생
@@ -359,33 +384,23 @@
         };
         audio.addEventListener('ended', ttsHandler, { once: true });
 
-        // ── 블루투스 스피커 강제 wake-up ──
-        // 방식: Web Audio API로 무음 버퍼를 먼저 재생 → 블루투스가 깨어남 → 700ms 후 실제 차임벨 재생
+        // ── 블루투스 스피커 깨우기 및 딜레이 후 재생 ──
+        let hasWebAudio = true;
         try {
-          const wakeCtx = new (window.AudioContext || window.webkitAudioContext)();
-          // 0.3초짜리 완전 무음 버퍼 생성 및 재생
-          const silentBuf = wakeCtx.createBuffer(1, wakeCtx.sampleRate * 0.3, wakeCtx.sampleRate);
-          const silentSrc = wakeCtx.createBufferSource();
-          silentSrc.buffer = silentBuf;
-          silentSrc.connect(wakeCtx.destination);
-          silentSrc.start();
-          // 무음(0.3s) + 여유(0.6s) = 총 900ms 후 차임벨 재생
-          setTimeout(() => {
-            audio.play().catch(e => {
-              console.error("Play error:", e);
-              audio.removeEventListener('ended', ttsHandler); // 재생 실패 시 리스너 제거
-            });
-          }, 900);
+          playSilentBuffer();
         } catch (wakeErr) {
-          // Web Audio API를 쓸 수 없는 환경은 딜레이만 더 크게 줘서 폴백
-          console.warn("Web Audio wake-up 실패, 딜레이 폴백 사용:", wakeErr);
-          setTimeout(() => {
-            audio.play().catch(e => {
-              console.error("Play error:", e);
-              audio.removeEventListener('ended', ttsHandler); // 재생 실패 시 리스너 제거
-            });
-          }, 1100);
+          hasWebAudio = false;
+          console.warn("Web Audio wake-up 실패, 폴백 모드로 진행:", wakeErr);
         }
+
+        // 선제적으로 깨어났을 것이므로, Web Audio 성공 시 200ms만 대기 후 재생 (실패 시 폴백 400ms)
+        const playDelay = hasWebAudio ? 200 : 400;
+        setTimeout(() => {
+          audio.play().catch(e => {
+            console.error("Play error:", e);
+            audio.removeEventListener('ended', ttsHandler); // 재생 실패 시 리스너 제거
+          });
+        }, playDelay);
       }
       prevQueueLength = queue.length;
       render(queue);

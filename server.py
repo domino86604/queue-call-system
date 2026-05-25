@@ -29,6 +29,10 @@ def health():
 def on_connect():
     emit('queue_update', {'queue': queue})
 
+@socketio.on('wake_speaker')
+def on_wake_speaker():
+    socketio.emit('wake_speaker')
+
 @socketio.on('add_number')
 def on_add_number(data):
     number = str(data.get('number', '')).strip()
