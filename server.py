@@ -31,7 +31,7 @@ def on_connect():
 
 @socketio.on('wake_speaker')
 def on_wake_speaker():
-    socketio.emit('wake_speaker')
+    emit('wake_speaker', broadcast=True, include_self=False)
 
 @socketio.on('add_number')
 def on_add_number(data):

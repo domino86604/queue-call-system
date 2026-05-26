@@ -292,6 +292,7 @@
     const socket = io();
     let prevQueueLength = 0;
     let soundEnabled = false;
+    let audioCtx = null;
 
     // 밝고 생동감 있는 한국어 음성 선택
     // 우선순위: 여성 음성(Yuna/female) → 첫 번째 한국어 음성 → null(시스템 기본값)
@@ -307,17 +308,34 @@
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) throw new Error("Web Audio API not supported");
       
-      const wakeCtx = new AudioCtx();
-      const silentBuf = wakeCtx.createBuffer(1, wakeCtx.sampleRate * 0.3, wakeCtx.sampleRate);
-      const silentSrc = wakeCtx.createBufferSource();
+      if (!audioCtx) {
+        audioCtx = new AudioCtx();
+      }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      const silentBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.3, audioCtx.sampleRate);
+      const silentSrc = audioCtx.createBufferSource();
       silentSrc.buffer = silentBuf;
-      silentSrc.connect(wakeCtx.destination);
+      silentSrc.connect(audioCtx.destination);
       silentSrc.start();
       console.log("Silent buffer played to wake speaker.");
     }
 
     function initSound() {
       const audio = document.getElementById('chimeSound');
+
+      // 전역 AudioContext 초기화
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          audioCtx = new AudioCtx();
+        }
+      } catch (e) {
+        console.warn("AudioContext 초기화 실패:", e);
+      }
 
       // 모바일 기기 정책 우회를 위해 음성 합성 엔진 초기화
       // getVoices()는 비동기로 로드되므로 onvoiceschanged 이후에 사용 가능
