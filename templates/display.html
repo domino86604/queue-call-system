@@ -91,11 +91,16 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 10px;
       text-align: center;
-      padding: 10px;
-      font-size: clamp(14px, 1.6vw, 22px);
-      color: rgba(255, 255, 255, 0.6);
+      padding: 14px 10px;
+      font-size: clamp(18px, 2.2vw, 30px);
+      color: rgba(255, 255, 255, 0.9);
       letter-spacing: 0.08em;
       flex-shrink: 0;
+    }
+
+    .info-banner strong {
+      color: #ffd700;
+      font-weight: 900;
     }
 
     .grid-wrap {
@@ -307,7 +312,7 @@
 
   <main>
     <div class="info-banner">
-      📢 &nbsp; 아래 화면에 번호(연락처 뒷자리)가 표시되면 카운터에서 수령해 주세요
+      📢 &nbsp; 화면에 고객님의 <strong>[휴대폰 번호 뒷자리 4자리]</strong>가 표시되면 카운터에서 수령해 주세요!
     </div>
     <div class="grid-wrap">
       <div class="number-grid" id="number-grid">
@@ -444,7 +449,7 @@
 
           // 숫자와 "번 고객님"을 하나의 utterance로 합쳐 발화 간 자동 pause 제거
           // (utterance를 분리하면 브라우저가 사이에 gap을 자동 삽입)
-          speechSynthesis.speak(makeUtterance(hangulNumber + ' 번 고객님', 1.0));           // 1번째
+          speechSynthesis.speak(makeUtterance('연락처 뒷자리, ' + hangulNumber + ' 번 고객님', 1.0));           // 1번째
           speechSynthesis.speak(makeUtterance(hangulNumber + ' 번 고객님, 주문하신 피자 나왔습니다.', 1.0)); // 2번째
         };
         audio.addEventListener('ended', ttsHandler, { once: true });
